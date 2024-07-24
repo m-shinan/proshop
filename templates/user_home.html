@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>E-Commerce Home</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <div class="container">
+            <a class="navbar-brand" href="#">E-Commerce Store</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarContent">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/user/userHome">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">Orders</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">Wishlist</a>
+                    </li>
+                </ul>
+                <form class="d-flex me-3">
+                    <input class="form-control me-2" type="search" placeholder="Search products">
+                    <button class="btn btn-outline-success" type="submit">Search</button>
+                </form>
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/user/cart"><i class="fas fa-shopping-cart"></i> Cart</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#"><i class="fas fa-user"></i> Profile</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/user/logout"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-md-3">
+                <h4>Filter Products</h4>
+                <form>
+                    <div class="mb-3">
+                        <label class="form-label">Category</label>
+                        <select class="form-select">
+                            <option>All Categories</option>
+                            <!-- Add categories dynamically -->
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Price Range</label>
+                        <input type="range" class="form-range" min="0" max="1000" step="10">
+                    </div>
+                    <button type="submit" class="btn btn-primary">Apply Filters</button>
+                </form>
+            </div>
+            <div class="col-md-9">
+                <h2>Featured Products</h2>
+                <div class="row">
+                    {{range .Products}}
+                    <div class="col-md-4 mb-4">
+                        <div class="card">
+                            <img src="/{{.Image}}" class="card-img-top"  alt="{{.ProductName}}">
+
+                            <div class="card-body">
+                                <h5 class="card-title">{{.ProductName}}</h5>
+                                <p class="card-text">₹{{.Price}}</p>
+                                <form action="/user/cart/add/{{.ID}}" method="POST">
+                                    <button type="submit" class="btn btn-primary">Add to Cart</button>
+                                </form>
+                                <button >
+                                    <i class="fas fa-heart"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    {{end}}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
