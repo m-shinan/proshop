@@ -12,14 +12,35 @@ import (
 	"github.com/m-shinan/project-shop/models"
 )
 
+// func AdminProducts(c *gin.Context) {
+// 	products, shouldReturn := GetProducts(c)
+// 	if shouldReturn {
+// 		return
+// 	}
+
+// 	categories, err := GetCategories()
+// 	if err {
+// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch categories"})
+// 		return
+// 	}
+
+// 	c.HTML(http.StatusOK, "admin_product.html", gin.H{
+// 		"Products":           products,
+// 		"Categories":         categories,
+// 		"ProductSearchTerm":  c.Query("search"),
+// 		"CategorySearchTerm": c.Query("search"),
+// 	})
+// }
+
 func AdminProducts(c *gin.Context) {
-	products, shouldReturn := GetProducts(c)
+	// No need to pass userID for admin view
+	products, shouldReturn := GetAdminProducts() // Note: Make sure GetProducts without userID is used here
 	if shouldReturn {
 		return
 	}
 
 	categories, err := GetCategories()
-	if err != nil {
+	if err {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch categories"})
 		return
 	}
@@ -32,13 +53,95 @@ func AdminProducts(c *gin.Context) {
 	})
 }
 
-func GetProducts(c *gin.Context) ([]models.Products, bool) {
+// func GetProducts(c *gin.Context) ([]models.Products, bool) {
+// 	db := database.DB
+// 	rows, err := db.Query(`
+//         SELECT p.id, p.product_name, p.description, p.stock, p.price, p.category_id, p.image, c.category_name
+//         FROM products p
+//         LEFT JOIN categories c ON p.category_id = c.id
+//     `)
+// 	if err != nil {
+// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch products"})
+// 		return nil, true
+// 	}
+// 	defer rows.Close()
+
+// 	var products []models.Products
+// 	for rows.Next() {
+// 		var product models.Products
+// 		var categoryName string
+// 		if err := rows.Scan(&product.ID, &product.ProductName, &product.Description, &product.Stock, &product.Price, &product.CategoryId, &product.Image, &categoryName); err != nil {
+// 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to scan product"})
+// 			return nil, true
+// 		}
+// 		product.Category.CategoryName = categoryName
+// 		products = append(products, product)
+// 	}
+// 	return products, false
+// }
+
+// func GetProducts(c *gin.Context, categoryID ...string) ([]models.Products, bool) {
+// 	db := database.DB
+// 	query := `
+//         SELECT p.id, p.product_name, p.description, p.stock, p.price, p.category_id, p.image, p.is_in_cart, p.is_in_wishlist, c.category_name
+//         FROM products p
+//         LEFT JOIN categories c ON p.category_id = c.id  ORDER BY p.id ASC
+//     `
+// 	args := []interface{}{}
+
+// 	if len(categoryID) > 0 && categoryID[0] != "" {
+// 		query += ` WHERE p.category_id = $1`
+// 		args = append(args, categoryID[0])
+// 	}
+
+// 	rows, err := db.Query(query, args...)
+// 	if err != nil {
+// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch products"})
+// 		return nil, true
+// 	}
+// 	defer rows.Close()
+
+// 	var products []models.Products
+// 	for rows.Next() {
+// 		var product models.Products
+// 		var categoryName string
+// 		if err := rows.Scan(&product.ID, &product.ProductName, &product.Description, &product.Stock, &product.Price, &product.CategoryId, &product.Image, &product.IsInCart, &product.IsInWishlist, &categoryName); err != nil {
+// 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to scan product"})
+// 			return nil, true
+// 		}
+// 		product.Category.CategoryName = categoryName
+// 		products = append(products, product)
+// 	}
+// 	return products, false
+// }
+
+func GetProducts(c *gin.Context, userID uint, categoryID ...string) ([]models.Products, bool) {
 	db := database.DB
-	rows, err := db.Query(`
-        SELECT p.id, p.product_name, p.description, p.stock, p.price, p.category_id, p.image, c.category_name
+	query := `
+        SELECT 
+            p.id, 
+            p.product_name, 
+            p.description, 
+            p.stock, 
+            p.price, 
+            p.category_id, 
+            p.image,
+            (SELECT COUNT(*) FROM cart WHERE user_id = $1 AND product_id = p.id) > 0 AS is_in_cart,
+            (SELECT COUNT(*) FROM wishlist WHERE user_id = $1 AND product_id = p.id) > 0 AS is_in_wishlist,
+            c.category_name
         FROM products p
         LEFT JOIN categories c ON p.category_id = c.id
-    `)
+    `
+	args := []interface{}{userID}
+
+	if len(categoryID) > 0 && categoryID[0] != "" {
+		query += ` WHERE p.category_id = $2`
+		args = append(args, categoryID[0])
+	}
+
+	query += ` ORDER BY p.id ASC`
+
+	rows, err := db.Query(query, args...)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch products"})
 		return nil, true
@@ -49,13 +152,188 @@ func GetProducts(c *gin.Context) ([]models.Products, bool) {
 	for rows.Next() {
 		var product models.Products
 		var categoryName string
-		if err := rows.Scan(&product.ID, &product.ProductName, &product.Description, &product.Stock, &product.Price, &product.CategoryId, &product.Image, &categoryName); err != nil {
+		if err := rows.Scan(&product.ID, &product.ProductName, &product.Description, &product.Stock, &product.Price, &product.CategoryId, &product.Image, &product.IsInCart, &product.IsInWishlist, &categoryName); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to scan product"})
 			return nil, true
 		}
 		product.Category.CategoryName = categoryName
 		products = append(products, product)
 	}
+	return products, false
+}
+
+func GetAdminProducts() ([]models.Products, bool) {
+	db := database.DB
+	query := `
+        SELECT 
+            p.id, 
+            p.product_name, 
+            p.description, 
+            p.stock, 
+            p.price, 
+            p.category_id, 
+            p.image,
+            c.category_name
+        FROM products p
+        LEFT JOIN categories c ON p.category_id = c.id
+        ORDER BY p.id ASC
+    `
+
+	rows, err := db.Query(query)
+	if err != nil {
+		return nil, true
+	}
+	defer rows.Close()
+
+	var products []models.Products
+	for rows.Next() {
+		var product models.Products
+		var categoryName string
+		if err := rows.Scan(&product.ID, &product.ProductName, &product.Description, &product.Stock, &product.Price, &product.CategoryId, &product.Image, &categoryName); err != nil {
+			return nil, true
+		}
+		product.Category.CategoryName = categoryName
+		products = append(products, product)
+	}
+	return products, false
+}
+
+// func SearchProducts(keyword string) ([]models.Products, error) {
+// 	// Use a placeholder query to prevent SQL injection
+// 	query := "SELECT id, name, price, image, is_in_cart, is_in_wishlist FROM products WHERE name ILIKE $1"
+// 	rows, err := database.DB.Query(query, "%"+keyword+"%")
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	defer rows.Close()
+
+// 	var products []models.Products
+// 	for rows.Next() {
+// 		var p models.Products
+// 		err := rows.Scan(&p.ID, &p.ProductName, &p.Price, &p.Image, &p.IsInCart, &p.IsInWishlist)
+// 		if err != nil {
+// 			return nil, err
+// 		}
+// 		products = append(products, p)
+// 	}
+// 	return products, nil
+// }
+
+// func GetUserProducts(c *gin.Context) ([]models.Products, bool) {
+//     userID := c.MustGet("userID").(uint)
+
+//     db := database.DB
+//     rows, err := db.Query(`
+//         SELECT p.id, p.product_name, p.description, p.stock, p.price, p.category_id, p.image, c.category_name,
+//                CASE WHEN cart.product_id IS NOT NULL THEN true ELSE false END AS is_in_cart
+//         FROM products p
+//         LEFT JOIN categories c ON p.category_id = c.id
+//         LEFT JOIN cart ON p.id = cart.product_id AND cart.user_id = $1
+//     `, userID)
+//     if err != nil {
+//         c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch products"})
+//         return nil, true
+//     }
+//     defer rows.Close()
+
+//     var products []models.Products
+//     for rows.Next() {
+//         var product models.Products
+//         var categoryName string
+//         var isInCart bool
+//         if err := rows.Scan(&product.ID, &product.ProductName, &product.Description, &product.Stock, &product.Price, &product.CategoryId, &product.Image, &categoryName, &isInCart); err != nil {
+//             c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to scan product"})
+//             return nil, true
+//         }
+//         product.Category.CategoryName = categoryName
+//         product.IsInCart = isInCart // Ensure this is set correctly
+//         products = append(products, product)
+//     }
+
+//     if err = rows.Err(); err != nil {
+//         c.JSON(http.StatusInternalServerError, gin.H{"error": "Error iterating over rows"})
+//         return nil, true
+//     }
+
+//     return products, false
+// }
+
+// func GetUserProducts(c *gin.Context) ([]models.Products, bool) {
+//     userID := c.MustGet("userID").(uint)
+
+//     db := database.DB
+//     rows, err := db.Query(`
+//         SELECT p.id, p.product_name, p.description, p.stock, p.price, p.category_id, p.image, c.category_name,
+//                CASE WHEN w.product_id IS NOT NULL THEN true ELSE false END AS is_in_wishlist
+//         FROM products p
+//         LEFT JOIN categories c ON p.category_id = c.id
+//         LEFT JOIN wishlist w ON p.id = w.product_id AND w.user_id = $1
+//     `, userID)
+//     if err != nil {
+//         c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch products"})
+//         return nil, true
+//     }
+//     defer rows.Close()
+
+//     var products []models.Products
+//     for rows.Next() {
+//         var product models.Products
+//         var categoryName string
+//         var isInWishlist bool
+//         if err := rows.Scan(&product.ID, &product.ProductName, &product.Description, &product.Stock, &product.Price, &product.CategoryId, &product.Image, &categoryName, &isInWishlist); err != nil {
+//             c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to scan product"})
+//             return nil, true
+//         }
+//         product.Category.CategoryName = categoryName
+//         product.IsInWishlist = isInWishlist
+//         products = append(products, product)
+//     }
+
+//     if err = rows.Err(); err != nil {
+//         c.JSON(http.StatusInternalServerError, gin.H{"error": "Error iterating over rows"})
+//         return nil, true
+//     }
+
+//     return products, false
+// }
+
+func GetUserProducts(c *gin.Context) ([]models.Products, bool) {
+	userID := c.MustGet("userID").(uint) // Assuming user ID is available in context
+
+	db := database.DB
+	rows, err := db.Query(`
+        SELECT p.id, p.product_name, p.description, p.stock, p.price, p.category_id, p.image, c.category_name,
+		COALESCE(cart.product_id IS NOT NULL, FALSE) AS is_in_cart,
+		COALESCE(wishlist.product_id IS NOT NULL, FALSE) AS is_in_wishlist
+		FROM products p
+		LEFT JOIN categories c ON p.category_id = c.id
+		LEFT JOIN cart ON p.id = cart.product_id AND cart.user_id = $1
+		LEFT JOIN wishlist ON p.id = wishlist.product_id AND wishlist.user_id = $1
+		ORDER BY p.id ASC
+    `, userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch products"})
+		return nil, true
+	}
+	defer rows.Close()
+
+	var products []models.Products
+	for rows.Next() {
+		var product models.Products
+		var categoryName string
+		if err := rows.Scan(&product.ID, &product.ProductName, &product.Description, &product.Stock, &product.Price, &product.CategoryId, &product.Image, &categoryName, &product.IsInCart, &product.IsInWishlist); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to scan product"})
+			return nil, true
+		}
+		product.Category.CategoryName = categoryName
+		products = append(products, product)
+	}
+
+	if err = rows.Err(); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error iterating over rows"})
+		return nil, true
+	}
+
 	return products, false
 }
 
@@ -138,9 +416,8 @@ func AdminAddProduct(c *gin.Context) {
 
 func AdminAddProductPage(c *gin.Context) {
 	categories, err := GetCategories()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
+	if err {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve categories"})
 	}
 	c.HTML(http.StatusOK, "admin_add_product.html", gin.H{"Categories": categories})
 }
@@ -242,12 +519,12 @@ func AdminDeleteProduct(c *gin.Context) {
 
 ///////////////////////////////////   CATEGORY     ////////////////////////////////////////////////
 
-func GetCategories() ([]models.Categories, error) {
+func GetCategories() ([]models.Categories, bool) {
 	db := database.DB
 	rows, err := db.Query("SELECT id, category_name FROM categories")
 	if err != nil {
 		log.Println("Error fetching categories:", err)
-		return nil, err
+		return nil, true
 	}
 	defer rows.Close()
 
@@ -256,12 +533,12 @@ func GetCategories() ([]models.Categories, error) {
 		var category models.Categories
 		if err := rows.Scan(&category.ID, &category.CategoryName); err != nil {
 			log.Println("Error scanning category row:", err)
-			return nil, err
+			return nil, true
 		}
 		categories = append(categories, category)
 	}
 	log.Println("Fetched categories:", categories)
-	return categories, nil
+	return categories, false
 }
 
 type Category struct {

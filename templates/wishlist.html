@@ -1,0 +1,166 @@
+<!-- <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wishlist</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            padding-top: 56px; /* Adjust this value based on the height of your navbar */
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-light bg-light fixed-top">
+        <div class="container">
+            <a class="navbar-brand" href="#">E-Commerce Store</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarContent">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/user/userHome">Home</a>
+                    </li>
+                </ul>
+                <form class="d-flex me-3">
+                    <input class="form-control me-2" type="search" placeholder="Search products">
+                    <button class="btn btn-outline-success" type="submit">Search</button>
+                </form>
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/user/cart"><i class="fas fa-shopping-cart"></i> Cart</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+    <div class="container mt-5">
+        <h1 class="mb-4">My Wishlist</h1>
+        <div class="row">
+            {{range .Products}}
+            <div class="col-md-4 mb-4">
+                <div class="card">
+                    <img src="/{{.Image}}" class="card-img-top" alt="{{.ProductName}}">
+                    <div class="card-body">
+                        <h5 class="card-title">{{.ProductName}}</h5>
+                        <p class="card-text">₹{{.Price}}</p>
+                        <div class="d-flex justify-content-between">
+                            {{if .IsInCart}}
+                                <a href="/user/cart" class="btn btn-primary">Go to Cart</a>
+                            {{else}}
+                                <form action="/user/cart/add/{{.ID}}" method="POST">
+                                    <button type="submit" class="btn btn-primary">Add to Cart</button>
+                                </form>
+                            {{end}}
+                            <form action="/user/wishlist/remove/{{.ID}}" method="POST">
+                                <button type="submit" class="btn btn-danger">
+                                    <i class="fas fa-heart"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {{end}}
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html> -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wishlist</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            padding-top: 56px; /* Adjust this value based on the height of your navbar */
+        }
+        .card {
+            max-width: 18rem; /* Adjust the max width of the card */
+        }
+        .card img {
+            height: 150px; /* Adjust the height of the image */
+            object-fit: cover; /* Ensure the image covers the area */
+        }
+        .card-body {
+            padding: 0.75rem; /* Adjust the padding inside the card */
+        }
+        .card-title {
+            font-size: 1rem; /* Adjust the font size of the card title */
+        }
+        .card-text {
+            font-size: 0.875rem; /* Adjust the font size of the card text */
+        }
+        .btn {
+            font-size: 0.875rem; /* Adjust the font size of the buttons */
+            padding: 0.25rem 0.5rem; /* Adjust the padding of the buttons */
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-light bg-light fixed-top">
+        <div class="container">
+            <a class="navbar-brand" href="#">E-Commerce Store</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarContent">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/user/userHome">Home</a>
+                    </li>
+                </ul>
+                <form class="d-flex me-3">
+                    <input class="form-control me-2" type="search" placeholder="Search products">
+                    <button class="btn btn-outline-success" type="submit">Search</button>
+                </form>
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/user/cart"><i class="fas fa-shopping-cart"></i> Cart</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+    <div class="container mt-5">
+        <h1 class="mb-4">My Wishlist</h1>
+        <div class="row">
+            {{range .Products}}
+            <div class="col-md-4 mb-4">
+                <div class="card">
+                    <img src="/{{.Image}}" class="card-img-top" alt="{{.ProductName}}">
+                    <div class="card-body">
+                        <h5 class="card-title">{{.ProductName}}</h5>
+                        <p class="card-text">₹{{.Price}}</p>
+                        <div class="d-flex justify-content-between">
+                            {{if .IsInCart}}
+                                <a href="/user/cart" class="btn btn-primary">Go to Cart</a>
+                            {{else}}
+                                <form action="/user/cart/add/{{.ID}}" method="POST">
+                                    <button type="submit" class="btn btn-primary">Add to Cart</button>
+                                </form>
+                            {{end}}
+                            <form action="/user/wishlist/remove/{{.ID}}" method="POST">
+                                <button type="submit" class="btn btn-danger">
+                                    <i class="fas fa-heart"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {{end}}
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

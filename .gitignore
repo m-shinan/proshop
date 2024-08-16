@@ -1,0 +1,6 @@
+.env
+go.mod
+go.sum
+project-shop.exe
+project-shop.exe~
+uploads

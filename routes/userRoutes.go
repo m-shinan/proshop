@@ -16,6 +16,12 @@ func UserRoutes(c *gin.Engine) {
 		})
 		user.POST("/signup", controllers.UserSignUp)
 
+		user.GET("/verifyotp", func(ctx *gin.Context) {
+			ctx.HTML(http.StatusOK, "otp.html", nil)
+		})
+
+		user.POST("/verify-otp", controllers.VerifyOTP)
+
 		user.GET("/login", func(c *gin.Context) {
 			c.HTML(http.StatusOK, "user_login.html", nil)
 		})
@@ -42,11 +48,49 @@ func UserRoutes(c *gin.Engine) {
 
 		////////////////// WISHLIST //////////////////////
 
-		user.GET("/wihslist", middleware.UserAuth, controllers.Wishlist)
+		user.GET("/wishlist", middleware.UserAuth, controllers.Wishlist)
 
 		user.POST("/wishlist/add/:id", middleware.UserAuth, controllers.AddToWishlist)
 
 		user.POST("/wishlist/remove/:id", middleware.UserAuth, controllers.RemoveFromWishlist)
+
+		/////////////////// CHECKOUT ////////////////////////
+
+		user.GET("/checkout", middleware.UserAuth, controllers.Checkout)
+
+		//////////////////// PROFILE ////////////////////////
+
+		user.GET("/profile", middleware.UserAuth, controllers.UserProfile)
+
+		user.POST("/profile/edit", middleware.UserAuth, controllers.EditUserProfile)
+
+		///////////////// PASSWORD ////////////////////
+
+		user.POST("/change/password", middleware.UserAuth, controllers.UserChangePassword)
+
+		///////////////// ADDRESS /////////////////
+
+		user.POST("/address/add", middleware.UserAuth, controllers.AddAddress)
+
+		user.GET("/address/edit/:id", middleware.UserAuth, controllers.EditAddressPage)
+
+		user.POST("/address/edit/:id", middleware.UserAuth, controllers.EditAddress)
+
+		user.GET("/address/delete/:id", middleware.UserAuth, controllers.DeleteAddress)
+
+		////////////////// PAYMENT ////////////////////////
+
+		user.POST("/razorpay", middleware.UserAuth, controllers.CreateOrderRazorPay)
+
+		user.POST("/payment/razorpay", middleware.UserAuth, controllers.ConfirmRazorpayPayment)
+
+		user.POST("/payment/cod", middleware.UserAuth, controllers.CreateOrderCod)
+
+		///////////////// ORDERS /////////////////////
+
+		user.GET("/orders", middleware.UserAuth, controllers.UserOrders)
+
+		user.POST("/orders/cancel", middleware.UserAuth, controllers.CancelOrder)
 
 	}
 

@@ -58,7 +58,7 @@ func AdminRoutes(c *gin.Engine) {
 
 		admin.POST("/categories/delete/:id", middleware.AdminAuth, controllers.AdminDeleteCat)
 
-		/////////////////////////////User management
+		/////////////////////////////User management ///////////////////////
 
 		admin.GET("/users", middleware.AdminAuth, controllers.AdminViewUsers)
 
@@ -67,6 +67,24 @@ func AdminRoutes(c *gin.Engine) {
 		admin.POST("/users/unblock/:id", middleware.AdminAuth, controllers.AdminUnblockUsers)
 
 		admin.POST("/users/delete/:id", middleware.AdminAuth, controllers.AdminDeleteUsers)
+
+		//////////////////////// order management /////////////////////
+
+		admin.GET("/orders", middleware.AdminAuth, controllers.AdminOrders)
+		admin.POST("/orders/update", middleware.AdminAuth, controllers.UpdateOrderStatus)
+		admin.GET("/orders/user/:user_id", middleware.AdminAuth, controllers.AdminOrdersByUser)
+
+		////////////////// COUPONS //////////////////
+
+		admin.GET("/coupons", middleware.AdminAuth, controllers.ViewCoupons)
+		admin.POST("/coupons/add", middleware.AdminAuth, controllers.AddCoupon)
+		admin.GET("/coupons/edit/:id", middleware.AdminAuth, controllers.EditCouponForm)
+		admin.POST("/coupons/edit", middleware.AdminAuth, controllers.EditCoupon)
+		admin.POST("/coupons/delete/:id", middleware.AdminAuth, controllers.DeleteCoupon)
+
+		////////////// SALES REPORT ///////////////////
+
+		admin.GET("/sales/report", middleware.AdminAuth, controllers.SalesReport)
 
 	}
 }

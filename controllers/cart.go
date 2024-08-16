@@ -21,10 +21,10 @@ func Cart(c *gin.Context) {
 
 	var cartData CartData
 	query := `
-        SELECT p.id, p.name, p.price, c.quantity 
-        FROM cart c
-        JOIN products p ON c.product_id = p.id
-        WHERE c.user_id = $1`
+        SELECT p.id, p.product_name, p.price, c.quantity, p.image
+    FROM cart c
+    JOIN products p ON c.product_id = p.id
+    WHERE c.user_id = $1`
 
 	rows, err := database.DB.Query(query, userID)
 	if err != nil {
@@ -36,7 +36,7 @@ func Cart(c *gin.Context) {
 
 	for rows.Next() {
 		var item models.CartItem
-		err := rows.Scan(&item.ProductID, &item.ProductName, &item.ProductPrice, &item.Quantity)
+		err := rows.Scan(&item.ProductID, &item.ProductName, &item.ProductPrice, &item.Quantity, &item.ImageFilename)
 		if err != nil {
 			log.Printf("Error scanning row: %v", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to scan cart item"})
@@ -122,7 +122,7 @@ func AddToCart(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Product added to cart"})
+	c.Redirect(http.StatusFound, "/user/userHome")
 }
 
 func RemoveFromCart(c *gin.Context) {
@@ -140,6 +140,131 @@ func RemoveFromCart(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to remove from cart"})
 		return
 	}
+	c.Redirect(http.StatusFound, "/user/cart")
+}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Product removed from cart"})
+/////////////////////// CHECK OUT /////////////////
+// func Checkout(c *gin.Context) {
+// 	userID := c.MustGet("userID").(uint)
+// 	log.Printf("Fetching checkout details for user ID: %d", userID)
+
+// 	var checkoutData CartData
+// 	query := `
+//         SELECT p.id, p.product_name, p.price, c.quantity, p.image
+//         FROM cart c
+//         JOIN products p ON c.product_id = p.id
+//         WHERE c.user_id = $1`
+
+// 	rows, err := database.DB.Query(query, userID)
+// 	if err != nil {
+// 		log.Printf("Error querying database: %v", err)
+// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve cart items"})
+// 		return
+// 	}
+// 	defer rows.Close()
+
+// 	for rows.Next() {
+// 		var item models.CartItem
+// 		err := rows.Scan(&item.ProductID, &item.ProductName, &item.ProductPrice, &item.Quantity, &item.ImageFilename)
+// 		if err != nil {
+// 			log.Printf("Error scanning row: %v", err)
+// 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to scan cart item"})
+// 			return
+// 		}
+// 		item.TotalPrice = item.ProductPrice * float64(item.Quantity)
+// 		checkoutData.CartTotal += item.TotalPrice
+// 		checkoutData.CartItems = append(checkoutData.CartItems, item)
+// 	}
+
+// 	if err = rows.Err(); err != nil {
+// 		log.Printf("Error iterating over rows: %v", err)
+// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error iterating over rows"})
+// 		return
+// 	}
+
+// 	var addresses []models.Address
+// 	rows, err = database.DB.Query("SELECT id, user_id, name, mobile_number, home_name, place, landmark, city, district, state, country, postal_code FROM addresses WHERE user_id = $1", userID)
+// 	if err != nil {
+// 		c.HTML(http.StatusInternalServerError, "error.html", gin.H{"error": "Unable to fetch addresses"})
+// 		return
+// 	}
+// 	defer rows.Close()
+
+// 	for rows.Next() {
+// 		var address models.Address
+// 		if err := rows.Scan(&address.ID, &address.UserID, &address.Name, &address.MobileNumber, &address.HomeName, &address.Place, &address.Landmark, &address.City, &address.District, &address.State, &address.Country, &address.PostalCode); err != nil {
+// 			c.HTML(http.StatusInternalServerError, "error.html", gin.H{"error": "Error scanning address data"})
+// 			return
+// 		}
+// 		addresses = append(addresses, address)
+// 	}
+
+// 	log.Printf("Checkout data retrieved successfully: %+v", checkoutData)
+// 	c.HTML(http.StatusOK, "checkout.html", gin.H{
+// 		"checkoutdata": checkoutData,
+// 		"Addresses":    addresses,
+// 	})
+// }
+
+func Checkout(c *gin.Context) {
+	userID := c.MustGet("userID").(uint)
+	log.Printf("Fetching checkout details for user ID: %d", userID)
+
+	var checkoutData CartData
+	query := `
+        SELECT p.id, p.product_name, p.price, c.quantity, p.image 
+        FROM cart c
+        JOIN products p ON c.product_id = p.id
+        WHERE c.user_id = $1`
+
+	rows, err := database.DB.Query(query, userID)
+	if err != nil {
+		log.Printf("Error querying database: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve cart items"})
+		return
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var item models.CartItem
+		err := rows.Scan(&item.ProductID, &item.ProductName, &item.ProductPrice, &item.Quantity, &item.ImageFilename)
+		if err != nil {
+			log.Printf("Error scanning row: %v", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to scan cart item"})
+			return
+		}
+		item.TotalPrice = item.ProductPrice * float64(item.Quantity)
+		checkoutData.CartTotal += item.TotalPrice
+		checkoutData.CartItems = append(checkoutData.CartItems, item)
+	}
+
+	if err = rows.Err(); err != nil {
+		log.Printf("Error iterating over rows: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error iterating over rows"})
+		return
+	}
+
+	var addresses []models.Address
+	rows, err = database.DB.Query("SELECT id, user_id, name, mobile_number, home_name, place, landmark, city, district, state, country, postal_code FROM addresses WHERE user_id = $1", userID)
+	if err != nil {
+		c.HTML(http.StatusInternalServerError, "error.html", gin.H{"error": "Unable to fetch addresses"})
+		return
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var address models.Address
+		if err := rows.Scan(&address.ID, &address.UserID, &address.Name, &address.MobileNumber, &address.HomeName, &address.Place, &address.Landmark, &address.City, &address.District, &address.State, &address.Country, &address.PostalCode); err != nil {
+			c.HTML(http.StatusInternalServerError, "error.html", gin.H{"error": "Error scanning address data"})
+			return
+		}
+		addresses = append(addresses, address)
+	}
+
+	log.Printf("Checkout data retrieved successfully: %+v", checkoutData)
+	log.Printf("Addresses retrieved successfully: %+v", addresses)
+	c.HTML(http.StatusOK, "checkout.html", gin.H{
+		"checkoutdata": checkoutData,
+		"Addresses":    addresses,
+	})
 }

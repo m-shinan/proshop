@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Checkout</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    <style>
+        body {
+            padding-top: 56px; /* Adjust this value based on the height of your navbar */
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-light bg-light fixed-top">
+        <div class="container">
+            <a class="navbar-brand" href="#">E-Commerce Store</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarContent">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/user/userHome">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/user/wishlist">Wishlist</a>
+                    </li>
+                </ul>
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/user/cart"><i class="fas fa-shopping-cart"></i> Cart</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+    <div class="container mt-5">
+        <h1 class="mb-4">Checkout</h1>
+        <div class="row">
+            <div class="col-md-8">
+                <h2>Products</h2>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Product</th>
+                            <th>Image</th>
+                            <th>Quantity</th>
+                            <th>Price</th>
+                            <th>Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {{range .checkoutdata.CartItems}}
+                        <tr>
+                            <td>{{.ProductName}}</td>
+                            <td><img src="/{{.ImageFilename}}" alt="{{.ProductName}}" style="width: 100px; height: auto;"></td>
+                            <td>{{.Quantity}}</td>
+                            <td>₹{{.ProductPrice}}</td>
+                            <td>₹{{.TotalPrice}}</td>
+                        </tr>
+                        {{end}}
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="4" class="text-end"><strong>Total:</strong></td>
+                            <td><strong>₹{{.checkoutdata.CartTotal}}</strong></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            <div class="col-md-4">
+                <h2>Order Summary</h2>
+                <div class="card">
+                    <div class="card-body">
+                        <p><strong>Total Amount: ₹{{.checkoutdata.CartTotal}}</strong></p>
+                        <h3>Shipping Address</h3>
+                        <select name="address" id="addressSelect" class="form-select mb-3" required>
+                            <option value="" selected>Select an address</option>
+                            {{range .Addresses}}
+                            <option value="{{.ID}}">{{.HomeName}}, {{.City}}, {{.PostalCode}}</option>
+                            {{end}}
+                        </select>
+                        <a class="btn btn-primary" href="/user/profile"><i class="fas fa-user"></i> Add New Address</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row mt-4">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-body text-center">
+                       <form id="codForm" method="POST">
+                           <input type="hidden" name="address_id" id="codAddressId" value="">
+                           <input type="hidden" name="total_amount" id="codTotalAmount" value="{{.checkoutdata.CartTotal}}">
+                           <button type="button" class="btn btn-primary" onclick="submitCOD()">Cash on Delivery</button>
+                       </form>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <button type="button" class="btn btn-primary" id="razorpayButton">Razorpay</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    <script>
+    // Function to submit COD order
+    function submitCOD() {
+    const selectedAddress = document.getElementById('addressSelect').value;
+    const totalAmount = document.getElementById('codTotalAmount').value;
+
+    if (!selectedAddress) {
+        alert('Please select a shipping address.');
+        return;
+    }
+
+    document.getElementById('codAddressId').value = selectedAddress;
+
+    fetch('/user/payment/cod', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            address_id: parseInt(selectedAddress),  // Ensure it's an integer
+            total_amount: parseFloat(totalAmount)   // Ensure it's a float
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.message === "Order placed successfully") {
+            // Show alert message
+            alert(data.message);
+
+            // Redirect after a short delay
+            setTimeout(function() {
+                window.location.href = data.redirect_url;
+            }, 2000); // Delay of 2 seconds before redirect
+        } else {
+            alert(data.error);
+        }
+    })
+    .catch(error => console.error('Error:', error));
+}
+
+
+    // Handle Razorpay payment
+
+document.addEventListener("DOMContentLoaded", function() {
+    const razorpayButton = document.getElementById('razorpayButton');
+
+    razorpayButton.addEventListener("click", function(e) {
+        e.preventDefault();
+
+        const selectedAddress = document.getElementById('addressSelect').value;
+
+        if (!selectedAddress || selectedAddress === "Select an address") {
+            alert('Please select a shipping address.');
+            return;
+        }
+
+        // Fetch order creation details from the backend
+        fetch('/user/razorpay', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ 
+                total_amount: parseFloat("{{.checkoutdata.CartTotal}}"), // Amount in INR
+                address_id: parseInt(selectedAddress)
+            })
+        })
+
+        .then(response => response.json())
+        .then(data => {
+            // Check if the response has necessary data
+            if (!data.orderID || !data.amount) {
+                throw new Error('Invalid response data from /user/razorpay');
+            }
+
+            var options = {
+                "key": "rzp_test_hy3toARxu0rJLv", // Your Razorpay key ID
+                "amount": data.amount, // Amount in paise
+                "currency": "INR",
+                "name": "E-Commerce Store",
+                "description": "Purchase Order",
+                "order_id": data.orderID, // Order ID from the backend
+                "handler": function (response) {
+                    // Confirm payment details with the backend
+                    fetch('/user/payment/razorpay', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            razorpay_order_id: response.razorpay_order_id,
+                            razorpay_payment_id: response.razorpay_payment_id,
+                            razorpay_signature: response.razorpay_signature,
+                            address_id: parseInt(selectedAddress),
+                            total_amount: parseFloat("{{.checkoutdata.CartTotal}}") // Total amount as float
+                        })
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.status === "Payment verified and order created successfully") {
+                            alert("Payment Successful, Order Created");
+                            window.location.href = "/user/orders"; // Redirect to orders page
+                        } else {
+                            alert("Order creation failed");
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert("Order creation failed");
+                    });
+                },
+                "prefill": {
+                    "name": data.user.name,
+                    "email": data.user.email,
+                    "contact": data.user.contact
+                },
+                "theme": {
+                    "color": "#3399cc"
+                }
+            };
+
+            var rzp1 = new Razorpay(options);
+            rzp1.open();
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert("Failed to initialize payment. Please try again.");
+        });
+    });
+});
+</script>
+
+</body>
+</html>

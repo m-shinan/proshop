@@ -107,7 +107,8 @@ func UserAuth(c *gin.Context) {
 	tokenString, err := c.Cookie("UserAuthorization")
 	if err != nil {
 		log.Printf("Error retrieving cookie: %v", err)
-		c.JSON(http.StatusUnauthorized, gin.H{"message": "Authorization required"})
+		c.Redirect(http.StatusFound, "/user/login")
+
 		c.Abort()
 		return
 	}

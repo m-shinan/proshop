@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Coupon Management</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            padding-top: 56px; /* Height of the fixed navbar */
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">Admin Dashboard</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link active" aria-current="page" href="/admin/adminHome">Home</a>
+                    </li>
+                </ul>
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/admin/profile">Profile</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/admin/logout">Logout</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <h1>Coupon Management</h1>
+
+        <!-- Add/Edit Coupon Form -->
+        <div class="card mb-4">
+            <div class="card-header">
+                {{if .EditingCoupon}}Edit Coupon{{else}}Add New Coupon{{end}}
+            </div>
+            <div class="card-body">
+                <form action="/admin/coupons/{{if .EditingCoupon}}edit{{else}}add{{end}}" method="POST">
+                    {{if .EditingCoupon}}<input type="hidden" name="id" value="{{.Coupon.ID}}">{{end}}
+                    <div class="mb-3">
+                        <label for="code" class="form-label">Coupon Code</label>
+                        <input type="text" class="form-control" id="code" name="code" value="{{.Coupon.Code}}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="discount_amount" class="form-label">Discount Amount</label>
+                        <input type="number" step="0.01" class="form-control" id="discount_amount" name="discount_amount" value="{{.Coupon.DiscountAmount}}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description</label>
+                        <textarea class="form-control" id="description" name="description">{{.Coupon.Description}}</textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="user_limit" class="form-label">User Limit</label>
+                        <input type="number" class="form-control" id="user_limit" name="user_limit" value="{{.Coupon.UserLimit}}" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">{{if .EditingCoupon}}Update{{else}}Add{{end}} Coupon</button>
+                    {{if .EditingCoupon}}
+                    <a href="/admin/coupons" class="btn btn-secondary">Cancel</a>
+                    {{end}}
+                </form>
+            </div>
+        </div>
+
+        <!-- Coupon List -->
+        <div class="card">
+            <div class="card-header">
+                Coupon List
+            </div>
+            <div class="card-body">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Code</th>
+                            <th>Discount Amount</th>
+                            <th>Description</th>
+                            <th>User Limit</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {{range .coupons}}
+                        <tr>
+                            <td>{{.Code}}</td>
+                            <td>${{.DiscountAmount}}</td>
+                            <td>{{.Description}}</td>
+                            <td>{{.UserLimit}}</td>
+                            <td>
+                                <a href="/admin/coupons/edit/{{.ID}}" class="btn btn-sm btn-warning">Edit</a>
+                                <form action="/admin/coupons/delete/{{.ID}}" method="POST" style="display: inline;">
+                                    <input type="hidden" name="id" value="{{.ID}}">
+                                    <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure you want to delete this coupon?')">Delete</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {{end}}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
