@@ -89,14 +89,4 @@ func AdminRoutes(c *gin.Engine) {
 	}
 }
 
-// admin.POST("/login", controllers.AdminLogin())
-// admin.GET("/logout", controllers.AdminLogout())
-// admin.GET("/dashboard", controllers.AdminDashboard())
 
-// admin user controlls
-
-// admin.GET("/viewUsers", controllers.ViewUsers())
-// admin.GET("/searchUsers", controllers.searchUsers())
-// admin.GET("/deleteUser", controllers.DeleteUser())
-// admin.GET("/blockUser", controllers.blockUser())
-// admin.GET("/unblockUser", controllers.unblockUser())

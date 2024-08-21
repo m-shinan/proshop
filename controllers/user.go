@@ -216,19 +216,20 @@ func UserLogin(c *gin.Context) {
 func ValidateUser(c *gin.Context) {
 	c.Get("user")
 
-	c.Redirect(http.StatusSeeOther, "/user/userHome")
+	c.Redirect(http.StatusSeeOther, "/")
 }
 
 func UserLogout(c *gin.Context) {
 	c.SetCookie("UserAuthorization", "", -1, "", "", false, false)
-	c.Redirect(http.StatusSeeOther, "/user/login")
+	c.Redirect(http.StatusSeeOther, "/")
 }
 
 func UserHome(c *gin.Context) {
 	userID := c.MustGet("userID").(uint)
 	categoryID := c.DefaultQuery("category", "")
+	searchQuery := c.DefaultQuery("search", "")
 
-	products, err := GetProducts(c, userID, categoryID)
+	products, err := GetProducts(c, userID, categoryID, searchQuery)
 	if err {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch products"})
 		return
@@ -245,26 +246,6 @@ func UserHome(c *gin.Context) {
 		"Categories": categories,
 	})
 }
-
-// func UserHome(c *gin.Context) {
-// 	categoryID := c.DefaultQuery("category", "")
-// 	products, err := GetProducts(c, categoryID)
-// 	if err {
-// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch products"})
-// 		return
-// 	}
-
-// 	categories, err := GetCategories()
-// 	if err {
-// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch categories"})
-// 		return
-// 	}
-
-// 	c.HTML(http.StatusOK, "user_home.html", gin.H{
-// 		"Products":   products,
-// 		"Categories": categories,
-// 	})
-// }
 
 //////////////////////////////  ADMIN USER MANAGEMENT ////////////////////////////
 

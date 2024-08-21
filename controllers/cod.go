@@ -13,6 +13,7 @@ import (
 type CODOrderRequest struct {
 	AddressID   uint    `json:"address_id" binding:"required"`
 	TotalAmount float64 `json:"total_amount" binding:"required"`
+	CouponCode  string  `json:"coupon_code"`
 }
 
 func CreateOrderCod(c *gin.Context) {
@@ -30,13 +31,19 @@ func CreateOrderCod(c *gin.Context) {
 		return
 	}
 
+	discountedAmount, err := ApplyDiscount(req.TotalAmount, req.CouponCode, userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to apply discount"})
+		return
+	}
+
 	cartItems, err := GetCartItems(userID)
 	if err != nil || len(cartItems) == 0 {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to retrieve cart items"})
 		return
 	}
 
-	orderID, err := CreateOrder(userID, req.TotalAmount, req.AddressID)
+	orderID, err := CreateOrder(userID, discountedAmount, req.AddressID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to create order"})
 		return
@@ -61,6 +68,25 @@ func CreateOrderCod(c *gin.Context) {
 		"order_id":     orderID,
 		"redirect_url": "/user/orders",
 	})
+}
+
+func ApplyDiscount(totalAmount float64, couponCode string, userID uint) (float64, error) {
+	if couponCode == "" {
+		return totalAmount, nil
+	}
+
+	query := `SELECT discount_amount FROM coupons WHERE coupon_code = $1 AND expiry_date > NOW()`
+	var discountAmount float64
+	err := database.DB.QueryRow(query, couponCode).Scan(&discountAmount)
+	if err != nil {
+		return totalAmount, err
+	}
+
+	discountedAmount := totalAmount - discountAmount
+	if discountedAmount < 0 {
+		discountedAmount = 0
+	}
+	return discountedAmount, nil
 }
 
 func GetCartItems(userID uint) ([]models.CartItem, error) {

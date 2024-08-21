@@ -9,6 +9,7 @@ import (
 )
 
 func UserRoutes(c *gin.Engine) {
+	c.GET("/", middleware.UserAuth, controllers.UserHome)
 	user := c.Group("/user")
 	{
 		user.GET("/signup", func(c *gin.Context) {
@@ -30,7 +31,7 @@ func UserRoutes(c *gin.Engine) {
 
 		user.GET("/uservalidate", middleware.UserAuth, controllers.ValidateUser)
 
-		user.GET("/userHome", middleware.UserAuth, controllers.UserHome)
+		// user.GET("/userHome", middleware.UserAuth, controllers.UserHome)
 
 		user.GET("/logout", middleware.UserAuth, controllers.UserLogout)
 

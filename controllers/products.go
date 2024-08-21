@@ -12,25 +12,7 @@ import (
 	"github.com/m-shinan/project-shop/models"
 )
 
-// func AdminProducts(c *gin.Context) {
-// 	products, shouldReturn := GetProducts(c)
-// 	if shouldReturn {
-// 		return
-// 	}
 
-// 	categories, err := GetCategories()
-// 	if err {
-// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch categories"})
-// 		return
-// 	}
-
-// 	c.HTML(http.StatusOK, "admin_product.html", gin.H{
-// 		"Products":           products,
-// 		"Categories":         categories,
-// 		"ProductSearchTerm":  c.Query("search"),
-// 		"CategorySearchTerm": c.Query("search"),
-// 	})
-// }
 
 func AdminProducts(c *gin.Context) {
 	// No need to pass userID for admin view
@@ -53,69 +35,8 @@ func AdminProducts(c *gin.Context) {
 	})
 }
 
-// func GetProducts(c *gin.Context) ([]models.Products, bool) {
-// 	db := database.DB
-// 	rows, err := db.Query(`
-//         SELECT p.id, p.product_name, p.description, p.stock, p.price, p.category_id, p.image, c.category_name
-//         FROM products p
-//         LEFT JOIN categories c ON p.category_id = c.id
-//     `)
-// 	if err != nil {
-// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch products"})
-// 		return nil, true
-// 	}
-// 	defer rows.Close()
 
-// 	var products []models.Products
-// 	for rows.Next() {
-// 		var product models.Products
-// 		var categoryName string
-// 		if err := rows.Scan(&product.ID, &product.ProductName, &product.Description, &product.Stock, &product.Price, &product.CategoryId, &product.Image, &categoryName); err != nil {
-// 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to scan product"})
-// 			return nil, true
-// 		}
-// 		product.Category.CategoryName = categoryName
-// 		products = append(products, product)
-// 	}
-// 	return products, false
-// }
-
-// func GetProducts(c *gin.Context, categoryID ...string) ([]models.Products, bool) {
-// 	db := database.DB
-// 	query := `
-//         SELECT p.id, p.product_name, p.description, p.stock, p.price, p.category_id, p.image, p.is_in_cart, p.is_in_wishlist, c.category_name
-//         FROM products p
-//         LEFT JOIN categories c ON p.category_id = c.id  ORDER BY p.id ASC
-//     `
-// 	args := []interface{}{}
-
-// 	if len(categoryID) > 0 && categoryID[0] != "" {
-// 		query += ` WHERE p.category_id = $1`
-// 		args = append(args, categoryID[0])
-// 	}
-
-// 	rows, err := db.Query(query, args...)
-// 	if err != nil {
-// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch products"})
-// 		return nil, true
-// 	}
-// 	defer rows.Close()
-
-// 	var products []models.Products
-// 	for rows.Next() {
-// 		var product models.Products
-// 		var categoryName string
-// 		if err := rows.Scan(&product.ID, &product.ProductName, &product.Description, &product.Stock, &product.Price, &product.CategoryId, &product.Image, &product.IsInCart, &product.IsInWishlist, &categoryName); err != nil {
-// 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to scan product"})
-// 			return nil, true
-// 		}
-// 		product.Category.CategoryName = categoryName
-// 		products = append(products, product)
-// 	}
-// 	return products, false
-// }
-
-func GetProducts(c *gin.Context, userID uint, categoryID ...string) ([]models.Products, bool) {
+func GetProducts(c *gin.Context, userID uint, categoryID, searchQuery string) ([]models.Products, bool) {
 	db := database.DB
 	query := `
         SELECT 
@@ -134,9 +55,18 @@ func GetProducts(c *gin.Context, userID uint, categoryID ...string) ([]models.Pr
     `
 	args := []interface{}{userID}
 
-	if len(categoryID) > 0 && categoryID[0] != "" {
+	if categoryID != "" {
 		query += ` WHERE p.category_id = $2`
-		args = append(args, categoryID[0])
+		args = append(args, categoryID)
+	}
+
+	if searchQuery != "" {
+		if len(args) > 1 {
+			query += ` AND (p.product_name ILIKE $3 OR p.description ILIKE $3)`
+		} else {
+			query += ` WHERE (p.product_name ILIKE $2 OR p.description ILIKE $2)`
+		}
+		args = append(args, "%"+searchQuery+"%")
 	}
 
 	query += ` ORDER BY p.id ASC`
@@ -197,105 +127,6 @@ func GetAdminProducts() ([]models.Products, bool) {
 	}
 	return products, false
 }
-
-// func SearchProducts(keyword string) ([]models.Products, error) {
-// 	// Use a placeholder query to prevent SQL injection
-// 	query := "SELECT id, name, price, image, is_in_cart, is_in_wishlist FROM products WHERE name ILIKE $1"
-// 	rows, err := database.DB.Query(query, "%"+keyword+"%")
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	defer rows.Close()
-
-// 	var products []models.Products
-// 	for rows.Next() {
-// 		var p models.Products
-// 		err := rows.Scan(&p.ID, &p.ProductName, &p.Price, &p.Image, &p.IsInCart, &p.IsInWishlist)
-// 		if err != nil {
-// 			return nil, err
-// 		}
-// 		products = append(products, p)
-// 	}
-// 	return products, nil
-// }
-
-// func GetUserProducts(c *gin.Context) ([]models.Products, bool) {
-//     userID := c.MustGet("userID").(uint)
-
-//     db := database.DB
-//     rows, err := db.Query(`
-//         SELECT p.id, p.product_name, p.description, p.stock, p.price, p.category_id, p.image, c.category_name,
-//                CASE WHEN cart.product_id IS NOT NULL THEN true ELSE false END AS is_in_cart
-//         FROM products p
-//         LEFT JOIN categories c ON p.category_id = c.id
-//         LEFT JOIN cart ON p.id = cart.product_id AND cart.user_id = $1
-//     `, userID)
-//     if err != nil {
-//         c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch products"})
-//         return nil, true
-//     }
-//     defer rows.Close()
-
-//     var products []models.Products
-//     for rows.Next() {
-//         var product models.Products
-//         var categoryName string
-//         var isInCart bool
-//         if err := rows.Scan(&product.ID, &product.ProductName, &product.Description, &product.Stock, &product.Price, &product.CategoryId, &product.Image, &categoryName, &isInCart); err != nil {
-//             c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to scan product"})
-//             return nil, true
-//         }
-//         product.Category.CategoryName = categoryName
-//         product.IsInCart = isInCart // Ensure this is set correctly
-//         products = append(products, product)
-//     }
-
-//     if err = rows.Err(); err != nil {
-//         c.JSON(http.StatusInternalServerError, gin.H{"error": "Error iterating over rows"})
-//         return nil, true
-//     }
-
-//     return products, false
-// }
-
-// func GetUserProducts(c *gin.Context) ([]models.Products, bool) {
-//     userID := c.MustGet("userID").(uint)
-
-//     db := database.DB
-//     rows, err := db.Query(`
-//         SELECT p.id, p.product_name, p.description, p.stock, p.price, p.category_id, p.image, c.category_name,
-//                CASE WHEN w.product_id IS NOT NULL THEN true ELSE false END AS is_in_wishlist
-//         FROM products p
-//         LEFT JOIN categories c ON p.category_id = c.id
-//         LEFT JOIN wishlist w ON p.id = w.product_id AND w.user_id = $1
-//     `, userID)
-//     if err != nil {
-//         c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch products"})
-//         return nil, true
-//     }
-//     defer rows.Close()
-
-//     var products []models.Products
-//     for rows.Next() {
-//         var product models.Products
-//         var categoryName string
-//         var isInWishlist bool
-//         if err := rows.Scan(&product.ID, &product.ProductName, &product.Description, &product.Stock, &product.Price, &product.CategoryId, &product.Image, &categoryName, &isInWishlist); err != nil {
-//             c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to scan product"})
-//             return nil, true
-//         }
-//         product.Category.CategoryName = categoryName
-//         product.IsInWishlist = isInWishlist
-//         products = append(products, product)
-//     }
-
-//     if err = rows.Err(); err != nil {
-//         c.JSON(http.StatusInternalServerError, gin.H{"error": "Error iterating over rows"})
-//         return nil, true
-//     }
-
-//     return products, false
-// }
 
 func GetUserProducts(c *gin.Context) ([]models.Products, bool) {
 	userID := c.MustGet("userID").(uint) // Assuming user ID is available in context

@@ -17,59 +17,65 @@ var razorpayKey = "rzp_test_hy3toARxu0rJLv"
 var razorpaySecret = "BH0gPLym0gkIfTMOEymBzZpg"
 
 func CreateOrderRazorPay(c *gin.Context) {
-	log.Println("CreateOrderRazorPay called")
+    log.Println("CreateOrderRazorPay called")
 
-	client := razorpay.NewClient(razorpayKey, razorpaySecret)
+    client := razorpay.NewClient(razorpayKey, razorpaySecret)
 
-	userID, exists := c.Get("userID")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
-		return
-	}
+    userID, exists := c.Get("userID")
+    if !exists {
+        c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+        return
+    }
 
-	var req struct {
-		AddressID   uint    `json:"address_id" binding:"required"`
-		TotalAmount float64 `json:"total_amount" binding:"required"`
-	}
-	if err := c.ShouldBindJSON(&req); err != nil {
-		log.Println("Request binding error:", err)
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
+    var req struct {
+        AddressID   uint    `json:"address_id" binding:"required"`
+        TotalAmount float64 `json:"total_amount" binding:"required"`
+        CouponCode  string  `json:"coupon_code"`
+    }
+    if err := c.ShouldBindJSON(&req); err != nil {
+        log.Println("Request binding error:", err)
+        c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+        return
+    }
 
-	log.Printf("Request data: AddressID=%d, TotalAmount=%f\n", req.AddressID, req.TotalAmount)
+    discountedAmount, err := ApplyDiscount(req.TotalAmount, req.CouponCode, userID.(uint))
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to apply discount"})
+        return
+    }
 
-	user := struct {
-		Email   string
-		Contact string
-	}{}
-	query := "SELECT email, phone FROM users WHERE id=$1"
-	if err := database.DB.QueryRow(query, userID).Scan(&user.Email, &user.Contact); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch user details"})
-		return
-	}
+    user := struct {
+        Email   string
+        Contact string
+    }{}
+    query := "SELECT email, phone FROM users WHERE id=$1"
+    if err := database.DB.QueryRow(query, userID).Scan(&user.Email, &user.Contact); err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch user details"})
+        return
+    }
 
-	amount := req.TotalAmount * 100
-	orderData := map[string]interface{}{
-		"amount":   int(amount),
-		"currency": "INR",
-		"receipt":  "order_rcptid_" + time.Now().Format("20060102150405"),
-	}
+    amount := discountedAmount * 100 // Convert to paisa
+    orderData := map[string]interface{}{
+        "amount":   int(amount),
+        "currency": "INR",
+        "receipt":  "order_rcptid_" + time.Now().Format("20060102150405"),
+    }
 
-	order, err := client.Order.Create(orderData, nil)
-	if err != nil {
-		log.Println("Error creating Razorpay order:", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create Razorpay order"})
-		return
-	}
+    order, err := client.Order.Create(orderData, nil)
+    if err != nil {
+        log.Println("Error creating Razorpay order:", err)
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create Razorpay order"})
+        return
+    }
 
-	c.JSON(http.StatusOK, gin.H{
-		"orderID":      order["id"],
-		"amount":       order["amount"],
-		"user":         gin.H{"email": user.Email, "contact": user.Contact},
-		"redirect_url": "/user/orders",
-	})
+    c.JSON(http.StatusOK, gin.H{
+        "orderID":      order["id"],
+        "amount":       order["amount"],
+        "user":         gin.H{"email": user.Email, "contact": user.Contact},
+        "redirect_url": "/user/orders",
+    })
 }
+
 
 func ConfirmRazorpayPayment(c *gin.Context) {
 	log.Println("ConfirmRazorpayPayment called")
